@@ -1,22 +1,58 @@
 ---
-title: "Differential gene expression"
-output: html_notebook
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.3
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
 ---
 
+# Differential gene expression
 RNAseq data has previously been cleaned and mapped to the reference genome to arrive at counts per gene. This data was saved in a table format.
 The data was read into R:
 
 ```{r}
 counttable = read.table(file = gzfile("data/devspine_read_counts.tsv.gz"), sep = "\t", header = TRUE, row.names = 1)
-countmatrix = data.matrix(counttable)
+countdf = data.frame(counttable)
 ```
 
 PCA was carried out and the result plotted using ggplot2 and ggfortify:
+
 ```{r}
 require(ggplot2)
 require(ggfortify)
-pcamatrix <- cbind(condition=c("E12.5", "E12.5", "E12.5", "E16.5", "E16.5", "E16.5", "Adult", "Adult", "Adult"), t(countmatrix))
-pca <- prcomp(as.numeric(pcamatrix[, 2:ncol(pcamatrix)]))
-autoplot(pca, data = pcamatrix, colour = "condition")
+pcadf <- cbind.data.frame(Condition=c("E12.5", "E12.5", "E12.5", "E16.5", "E16.5", "E16.5", "Adult", "Adult", "Adult"), t(countdf))
+pca <- prcomp(pcadf[, 2:ncol(pcadf)])
+pcaplot <- autoplot(pca, data = pcadf, colour = "Condition")
+pcaplot
 ```
 
+```{r}
+ggsave(file="plots/sanity_checks/pca.svg", plot=pcaplot, width=6, height=3)
+```
+
+The results of this show a clear separation of E12.5 and Adult data. however, the E16.5 replicates do not form a clear cluster.\
+For additional analysis, a cluster dendogram was also plotted:
+
+```{r}
+require(pvclust)i
+pvc <- pvclust(countdf)
+dendrogram <- plot(pvc)
+```
+
+```{r}
+svg(filename="plots/sanity_checks/dendrogram.svg", 
+    width=5, 
+    height=4, 
+    pointsize=8)
+plot(pvc)
+dev.off()
+```
+
+In the cluster dendrogram, a separation into two clusters can be observed. The first of these clusters includes the three adult samples and one of the E16.5 samples, whereas the second cluster includes the three E12.5 and two of the E16.5 clusters.
