@@ -1,0 +1,77 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.3
+  kernelspec:
+    display_name: Python [conda env:scikit]
+    language: python
+    name: conda-env-scikit-py
+---
+
+```{python}
+import pandas as pd
+import xml.etree.ElementTree as et
+import urllib.request
+
+def xml_df(xroot, df_cols):
+    """
+    Takes the root of an xml file and creates a pd df with it, populating df_cols
+    """
+    rows = []
+    for node in xroot: 
+        res = []
+        for el in df_cols: 
+            if node is not None and node.find(el) is not None:
+                res.append(node.find(el).text)
+            else: 
+                res.append(None)
+        rows.append({df_cols[i]: res[i] 
+                     for i, _ in enumerate(df_cols)})
+    
+    out_df = pd.DataFrame(rows, columns=df_cols)
+    out_df["age"] = out_df["age"].astype(float).astype(int)
+    out_df["expression"] = out_df["expression"].astype(bool)
+    return out_df
+
+def get_ids(xml): 
+    """
+    Parse the Allen Brain Atlas "all genes" XML file to a pandas df.
+    
+    """
+    df_cols=["age","expression","gene-id","gene-symbol","id"]
+    xtree = et.parse(xml)
+    xroot = xtree.getroot() 
+    return xml_df(xroot, df_cols)
+    
+
+
+def get_expression(iddf, genesymbol, age):
+    """
+    Get expression levels for each replicate from the allen brain mouse spinal cord atlas.
+    Requires a dataframe that contains gene symbol / age -> id mappings (iddf).
+    Requires urllib.request, pandas as pd and parse_XML.
+    """
+    if not iddf.loc[(iddf["gene-symbol"] == genesymbol) & (iddf["age"] == age)]["expression"].values[0]:
+        return False
+    entryid = iddf.loc[(iddf["gene-symbol"] == genesymbol) & (iddf["age"] == age)]["id"].values[0]
+    
+    df_cols = ["expression","section-index","specimen-tissue-index","structure"]
+    url = "http://mousespinal.brain-map.org/imageseries/detail/{}.xml".format(entryid)
+    with urllib.request.urlopen(url) as content:
+        xtree = et.parse(content)
+    xroot = xtree.getroot()
+    return xml_df(xroot.find("section-expressions"), df_cols)
+```
+
+```{python}
+iddf = get_ids("data/Al_atl_genes.xml")
+```
+
+```{python}
+get_expression(iddf, "Abhd8", 56)
+```
