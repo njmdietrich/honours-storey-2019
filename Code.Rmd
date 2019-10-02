@@ -6,14 +6,15 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.1'
-      jupytext_version: 1.2.3
+      jupytext_version: 1.2.4
   kernelspec:
     display_name: R
     language: R
     name: ir
 ---
 
-# Differential gene expression
+# Honours Project
+## Sanity Checks
 RNAseq data has previously been cleaned and mapped to the reference genome to arrive at counts per gene. This data was saved in a table format.
 The data was read into R:
 
@@ -27,21 +28,23 @@ PCA was carried out and the result plotted using ggplot2 and ggfortify:
 ```{r}
 require(ggplot2)
 require(ggfortify)
-pcadf <- cbind.data.frame(Condition=c("E12.5", "E12.5", "E12.5", "E16.5", "E16.5", "E16.5", "Adult", "Adult", "Adult"), t(countdf))
+require(stringr)
+Condition=str_sub(colnames(countdf),1,5)
+pcadf <- cbind.data.frame(Condition, t(countdf))
 pca <- prcomp(pcadf[, 2:ncol(pcadf)])
-pcaplot <- autoplot(pca, data = pcadf, colour = "Condition")
+pcaplot <- autoplot(pca, data = pcadf, colour = "Condition", width=6, height=1)
 pcaplot
 ```
 
 ```{r}
-ggsave(file="plots/sanity_checks/pca.svg", plot=pcaplot, width=6, height=3)
+ggsave(file="plots/sanity_checks/pca.svg", plot=pcaplot, width=8, height=1.5)
 ```
 
 The results of this show a clear separation of E12.5 and Adult data. however, the E16.5 replicates do not form a clear cluster.\
 For additional analysis, a cluster dendogram was also plotted:
 
 ```{r}
-require(pvclust)i
+require(pvclust)
 pvc <- pvclust(countdf)
 dendrogram <- plot(pvc)
 ```
@@ -55,4 +58,21 @@ plot(pvc)
 dev.off()
 ```
 
-In the cluster dendrogram, a separation into two clusters can be observed. The first of these clusters includes the three adult samples and one of the E16.5 samples, whereas the second cluster includes the three E12.5 and two of the E16.5 clusters.
+In the cluster dendrogram, a separation into two clusters can be observed. The first of these clusters includes the three adult samples and one of the E16.5 samples, whereas the second cluster includes the three E12.5 and two of the E16.5 clusters.\
+Because of these issues, it was decided to exclude the E16.5 samples for now.
+## Differential gene expression (edgeR)
+
+```{r}
+require(edgeR)
+dge <- DGEList(countdf[,-c(4,5,6)], group=Condition[-c(4,5,6)]) #create DGEList object containing data from E12.5 and Adult
+keep <- filterByExpr(dge) #determine genes with low counts to be excluded
+dge <- dge[keep, , keep.lib.sizes=FALSE] #remove genes with low counts
+dge <- calcNormFactors(dge, method="TMM") #normalise libraries against each other
+design <- model.matrix( ~dge$sample$group)
+dge <- estimateDisp(dge, design)
+ext <- exactTest(dge)
+```
+
+```{r}
+topTags(ext)
+```
