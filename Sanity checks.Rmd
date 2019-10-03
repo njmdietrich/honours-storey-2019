@@ -13,8 +13,7 @@ jupyter:
     name: ir
 ---
 
-# Honours Project
-## Sanity Checks
+# Honours Project - Sanity Checks
 RNAseq data has previously been cleaned and mapped to the reference genome to arrive at counts per gene. This data was saved in a table format.
 The data was read into R:
 
@@ -58,21 +57,11 @@ plot(pvc)
 dev.off()
 ```
 
-In the cluster dendrogram, a separation into two clusters can be observed. The first of these clusters includes the three adult samples and one of the E16.5 samples, whereas the second cluster includes the three E12.5 and two of the E16.5 clusters.\
-Because of these issues, it was decided to exclude the E16.5 samples for now.
-## Differential gene expression (edgeR)
+In the cluster dendrogram, a separation into two clusters can be observed.\
+The first of these clusters includes the three adult samples and one of the E16.5 samples, whereas the second cluster includes the three E12.5 and two of the E16.5 clusters.\
+Because of these issues, it was decided to exclude the E16.5 samples for now.\
+Additionally, the spike-ins were also removed.
 
 ```{r}
-require(edgeR)
-dge <- DGEList(countdf[,-c(4,5,6)], group=Condition[-c(4,5,6)]) #create DGEList object containing data from E12.5 and Adult
-keep <- filterByExpr(dge) #determine genes with low counts to be excluded
-dge <- dge[keep, , keep.lib.sizes=FALSE] #remove genes with low counts
-dge <- calcNormFactors(dge, method="TMM") #normalise libraries against each other
-design <- model.matrix( ~dge$sample$group)
-dge <- estimateDisp(dge, design)
-ext <- exactTest(dge)
-```
-
-```{r}
-topTags(ext)
+saveRDS(countdf[!startsWith(rownames(countdf), "ercc"),-c(4,5,6)], file = "data/devspine_counts_excluded.rds")
 ```
