@@ -13,53 +13,27 @@ jupyter:
     name: ir
 ---
 
-# Differential gene expression (edgeR)
+# Honours Project - Differential gene expression (edgeR)
 Schurch et al. have shown that for a low number of replicates, edgeR exact is the preferred tool to use.\
-Additionally, a fold change threshold of 1 should be applied. (1)\
-To identify expression levels, TPM (transcripts per million) can be used. (2)\
-A slightly altered calculation has been proposed that may be better suited to compare expression levels between samples. (3)\
-Both calculations require transcript length. Transcript length was retrieved from a gtf file using refGenome.
+Additionally, a fold change threshold of 1 should be applied. (1)
 1. Schurch, N. J., Schofield, P., Gierliński, M., Cole, C., Sherstnev, A., Singh, V., … Barton, G. J. (2016).\
 How many biological replicates are needed in an RNA-seq experiment and which differential expression tool should you use? RNA, 22(6), 839. https://doi.org/10.1261/RNA.053959.115
-2. Li, B., Ruotti, V., Stewart, R. M., Thomson, J. A., & Dewey, C. N. (2009). RNA-Seq gene expression estimation with read mapping uncertainty.\
-Bioinformatics, 26(4), 493–500. https://doi.org/10.1093/bioinformatics/btp692
-3. Wagner, G. P., Kin, K., & Lynch, V. J. (2012). Measurement of mRNA abundance using RNA-seq data: RPKM measure is inconsistent among samples.\
-Theory in Biosciences, 131(4), 281–285. https://doi.org/10.1007/s12064-012-0162-3
 
 ```{r}
 countdf <- readRDS("data/devspine_counts_excluded.rds")
+TPM <- readRDS("data/TPM.rds")
 ```
 
 ```{r}
-require(refGenome)
-require(stringr)
-genome <- ensemblGenome()
-read.gtf(genome, filename="data/Mus_musculus.GRCm38.87.gtf") #opens the gtf file
-ann <- getGenePositions(genome,"gene_id") #retrieves gene annotations from the gtf file
-ann["gene_id"] <- str_to_lower(ann[["gene_id"]])
-ann <- ann[,colSums(is.na(ann))<nrow(ann)] #drops empty columns
-geneann <- data.frame(ensembl_id=rownames(countdf)) #create new dataframe that will have genes in the right order
-geneann <- merge(geneann, ann, by.x = "ensembl_id", by.y = "gene_id", all.x=TRUE, all.y=FALSE, sort=FALSE) #merge gene annotations dataframe with new one to order it
-geneann["length"] <- geneann[["end"]] - geneann[["start"]] + 1 #calculate the length of each gene
-rm(ann) #delete obsolete dataframe
-```
-
-```{r}
-calcTPM <- function(counts, lengths) { #This function calculates TPM as described by Li et al.
-    CPL = counts/lengths
-    TPM = CPL/sum(CPL)*10^6
-    return(TPM)
-}
-
-altcalcTPM <- function(counts, lengths, readlengths) { #This function implements the alternative TPM calculation as described by Wagner et al., but, for now, the data for readlengths is not available.
-    CLPL = (readlengths*counts)/lengths
-    TPM = CLPL/sum(CLPL)*10^6
-    return(TPM)
+highExpr <- function(vector, n1, n2) {
+    m1 <- mean(vector[1:n1])
+    m2 <- mean(vector[n1+1:n2])
+    return(max(c(m1, m2)))
 }
 ```
 
 ```{r}
-TPM <- apply(countdf, 2, calcTPM, geneann[["length"]])
+maxTPM <- apply(TPM, 1, highExpr, 3, 3)
 ```
 
 ```{r}
@@ -71,6 +45,23 @@ keep <- filterByExpr(dge) #determine genes with low counts to be excluded
 dge <- dge[keep, , keep.lib.sizes=FALSE] #remove genes with low counts
 dge <- calcNormFactors(dge, method="TMM") #normalise samples against each other
 design <- model.matrix( ~dge$sample$group) #create model (which samples are compared against which)
-dge <- estimateDisp(dge, design) 
+dge <- estimateDisp(dge, design)
 ext <- exactTest(dge) #apply test
+all <- topTags(ext, n=nrow(ext$table), adjust.method="BY", sort.by="none")
+all <- merge(all, maxTPM, by=0, all.x=TRUE, all.y=FALSE, sort=FALSE)
+names(all)[names(all) == 'y'] <- 'maxTPM'
+sig <- decideTestsDGE(ext, adjust.method="BY", p.value=0.01, lfc=1)
+sig <- all[sig != 0,]
+all <- all[order(all$PValue),]
+```
+
+```{r}
+head(sig[order(-sig$maxTPM),])
+```
+
+```{r}
+require(ggrepel)
+ggplot(data=all, aes(logFC, -log(PValue))) + geom_point(aes(color=log(maxTPM))) +
+        scale_colour_viridis_c() + geom_text_repel(data=head(all, 7), aes(label=maxTPM)) +
+        coord_cartesian(xlim = c(-20, 20)) + coord_cartesian(ylim = c(-10, 10000))
 ```

@@ -1,0 +1,65 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: R [conda env:rkernel] *
+    language: R
+    name: conda-env-rkernel-r
+---
+
+# Honours Project - Expression Quantification
+To identify expression levels, TPM (transcripts per million) can be used. (1)\
+A slightly altered calculation has been proposed that may be better suited to compare expression levels between samples. (2)\
+Both calculations require transcript length. Transcript length was retrieved from a gtf file using refGenome.
+1. Li, B., Ruotti, V., Stewart, R. M., Thomson, J. A., & Dewey, C. N. (2009). RNA-Seq gene expression estimation with read mapping uncertainty.\
+Bioinformatics, 26(4), 493–500. https://doi.org/10.1093/bioinformatics/btp692
+2. Wagner, G. P., Kin, K., & Lynch, V. J. (2012). Measurement of mRNA abundance using RNA-seq data: RPKM measure is inconsistent among samples.\
+Theory in Biosciences, 131(4), 281–285. https://doi.org/10.1007/s12064-012-0162-3
+
+```{r}
+countdf <- readRDS("data/devspine_counts_excluded.rds")
+```
+
+```{r}
+require(refGenome)
+require(stringr)
+genome <- ensemblGenome()
+read.gtf(genome, filename="data/Mus_musculus.GRCm38.87.gtf") #opens the gtf file
+ann <- getGenePositions(genome,"gene_id") #retrieves gene annotations from the gtf file
+ann["gene_id"] <- str_to_lower(ann[["gene_id"]])
+ann <- ann[,colSums(is.na(ann))<nrow(ann)] #drops empty columns
+geneann <- data.frame(ensembl_id=rownames(countdf)) #create new dataframe that will have genes in the right order
+geneann <- merge(geneann, ann, by.x = "ensembl_id", by.y = "gene_id", all.x=TRUE, all.y=FALSE, sort=FALSE) #merge gene annotations dataframe with new one to order it
+geneann["length"] <- geneann[["end"]] - geneann[["start"]] + 1 #calculate the length of each gene
+rm(ann) #delete obsolete dataframe
+```
+
+```{r}
+calcTPM <- function(counts, lengths) { #This function calculates TPM as described by Li et al.
+    RPB = counts/lengths
+    TPM = RPB/sum(RPB)*10^6
+    return(TPM)
+}
+
+altcalcTPM <- function(counts, lengths, readlengths) { #This function implements the alternative TPM calculation as described by Wagner et al., but, for now, the data for readlengths is not available.
+    CLPL = (readlengths*counts)/lengths
+    TPM = CLPL/sum(CLPL)*10^6
+    return(TPM)
+}
+```
+
+```{r}
+TPM <- apply(countdf, 2, calcTPM, geneann[["length"]])
+```
+
+```{r}
+saveRDS(TPM, file="data/TPM.rds")
+```
+
+The TPM values were saved.
