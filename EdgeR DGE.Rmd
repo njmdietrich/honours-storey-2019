@@ -56,12 +56,22 @@ all <- all[order(all$PValue),]
 ```
 
 ```{r}
-head(sig[order(-sig$maxTPM),])
+require(ggrepel)
+volcano <- ggplot(data=all, aes(logFC, -log(PValue))) + geom_point(aes(color=log(maxTPM))) +
+        scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) +
+        coord_cartesian(xlim = c(-20, 20)) + coord_cartesian(ylim = c(-10, 800))
+volcano
 ```
 
 ```{r}
-require(ggrepel)
-ggplot(data=all, aes(logFC, -log(PValue))) + geom_point(aes(color=log(maxTPM))) +
-        scale_colour_viridis_c() + geom_text_repel(data=head(all, 7), aes(label=maxTPM)) +
-        coord_cartesian(xlim = c(-20, 20)) + coord_cartesian(ylim = c(-10, 10000))
+ggsave(file = "plots/volcano.png", plot = volcano, width = 8, height = 8)
 ```
+
+It is very obvious that there are the "regular" genes and a number of genes with extremely low p-values.\
+To further investigate these genes, a threshold of -log(PValue) > 1000 was set to catch them.
+
+```{r}
+all[-log(all$PValue) > 1000,]
+```
+
+A list of 15 genes was identified with a p-value of 0. This makes plotting them awkward.
