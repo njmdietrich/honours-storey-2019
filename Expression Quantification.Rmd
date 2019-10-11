@@ -38,6 +38,7 @@ geneann <- data.frame(ensembl_id=rownames(countdf)) #create new dataframe that w
 geneann <- merge(geneann, ann, by.x = "ensembl_id", by.y = "gene_id", all.x=TRUE, all.y=FALSE, sort=FALSE) #merge gene annotations dataframe with new one to order it
 geneann["length"] <- geneann[["end"]] - geneann[["start"]] + 1 #calculate the length of each gene
 rm(ann) #delete obsolete dataframe
+saveRDS(geneann, file="data/devspine_genes.rds")
 ```
 
 ```{r}
