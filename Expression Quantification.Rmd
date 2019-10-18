@@ -15,7 +15,7 @@ jupyter:
 
 # Honours Project - Expression Quantification
 To identify expression levels, TPM (transcripts per million) can be used. (1)\
-A slightly altered calculation has been proposed that may be better suited to compare expression levels between samples. (2)\
+While this method requires read lengths, this is not necessarily required when lengths between samples are identical.\
 Both calculations require transcript length. Transcript length was retrieved from a gtf file using refGenome.
 1. Li, B., Ruotti, V., Stewart, R. M., Thomson, J. A., & Dewey, C. N. (2009). RNA-Seq gene expression estimation with read mapping uncertainty.\
 Bioinformatics, 26(4), 493–500. https://doi.org/10.1093/bioinformatics/btp692
@@ -42,13 +42,13 @@ saveRDS(geneann, file="data/devspine_genes.rds")
 ```
 
 ```{r}
-calcTPM <- function(counts, lengths) { #This function calculates TPM as described by Li et al.
+calcTPM <- function(counts, lengths) { #This function calculates TPM without read length
     RPB = counts/lengths
     TPM = RPB/sum(RPB)*10^6
     return(TPM)
 }
 
-altcalcTPM <- function(counts, lengths, readlengths) { #This function implements the alternative TPM calculation as described by Wagner et al., but, for now, the data for readlengths is not available.
+altcalcTPM <- function(counts, lengths, readlengths) { #This function implements the full TPM calculation as described by Wagner et al., but, for now, the data for readlengths is not available.
     CLPL = (readlengths*counts)/lengths
     TPM = CLPL/sum(CLPL)*10^6
     return(TPM)
