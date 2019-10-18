@@ -42,7 +42,7 @@ design <- model.matrix( ~dge$sample$group) #create model (which samples are comp
 dge <- estimateDisp(dge, design)
 ext <- exactTest(dge) #apply test
 all <- topTags(ext, n=nrow(ext$table), adjust.method="BY", sort.by="none")
-all = cbind(all$table, countdf[,7:9])
+all = merge(all$table, countdf[,7:9], by=0, all.x=TRUE, all.y=FALSE,sort=FALSE)
 names(all)[names(all) == 'y'] <- 'TPM'
 sig <- decideTestsDGE(ext, adjust.method="BY", p.value=0.01, lfc=1)
 sig <- all[sig != 0,]
@@ -59,11 +59,7 @@ volcano
 ```
 
 ```{r}
-head(countdf)
-```
-
-```{r}
-#ggsave(file = "plots/volcano.png", plot = volcano, width = 8, height = 8)
+ggsave(file = "plots/volcano.png", plot = volcano, width = 8, height = 8)
 ```
 
 A number of genes seem to have extremely low p-values.\
@@ -80,7 +76,7 @@ Variation in TPM is quite high in the sample, with apparently few genes reaching
 ```{r}
 geneann = readRDS("data/devspine_genes.rds")
 annall = merge(all, geneann[,c("ensembl_id","gene_name", "gene_biotype")], by.x="Row.names", by.y="ensembl_id", all.x=TRUE, all.y=FALSE, sort=FALSE)
-annall[order(-annall$TPM),][1:20,]
+annall[order(-annall$maxTPM),][1:20,]
 ```
 
 The genes with very high expression levels appear to be mainly non-protein-coding genes.
@@ -95,12 +91,16 @@ For the sake of further analysis, they were excluded. This reduces the list from
 
 ```{r}
 require(ggrepel)
-volcano <- ggplot(data=allproteins, aes(logFC, -log2(PValue))) + geom_point(aes(color=log2(TPM)), size=1) +
+volcano <- ggplot(data=allproteins, aes(logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
         coord_cartesian(ylim = c(-10, 1100))
 
 volcano
+```
+
+```{r}
+ggsave(file = "plots/volcano_proteins.png", plot = volcano, width = 8, height = 8)
 ```
 
 Plotting the volcano plot again reveals no big difference, with the exception of expression levels being more clearly distinguished due to the absence of a few extremely highly expressed non-protein-coding genes.
@@ -109,9 +109,9 @@ Plotting the volcano plot again reveals no big difference, with the exception of
 sigprot = merge(sig, allproteins, all.x=TRUE, all.y=FALSE, sort=FALSE)
 sum(sigprot$logFC < 0)
 sum(sigprot$logFC > 0)
-mean(sigprot[sigprot$logFC < 0,]$TPM)
-mean(sigprot[sigprot$logFC > 0,]$TPM)
+mean(sigprot[sigprot$logFC < 0,]$maxTPM)
+mean(sigprot[sigprot$logFC > 0,]$maxTPM)
 ```
 
-Overall, almost twice as many genes are upregulated than are downregulated in adult cells.\
+Overall, over 1000 more genes are upregulated than are downregulated in adult cells.\
 Additionally, embryonal expression levels of downregulated genes are far lower than adult expression levels of upregulated genes.
