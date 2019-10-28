@@ -64,4 +64,5 @@ Additionally, the spike-ins were also removed.
 
 ```{r}
 saveRDS(countdf[!startsWith(rownames(countdf), "ercc"),-c(4,5,6)], file = "data/devspine_counts_excluded.rds")
+saveRDS(countdf[!startsWith(rownames(countdf), "ercc"),-c(4)], file="data/devspine_counts.rds")
 ```

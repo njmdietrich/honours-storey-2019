@@ -22,6 +22,7 @@ How many biological replicates are needed in an RNA-seq experiment and which dif
 ```{r}
 countdf <- readRDS("data/devspine_counts_excluded.rds")
 indTPM <- readRDS("data/TPM.rds")
+indTPM = indTPM[,-c(4, 5)]
 ```
 
 ```{r}
@@ -39,8 +40,11 @@ keep <- filterByExpr(dge) #determine genes with low counts to be excluded
 dge <- dge[keep, , keep.lib.sizes=FALSE] #remove genes with low counts
 dge <- calcNormFactors(dge, method="TMM") #normalise samples against each other
 design <- model.matrix( ~dge$sample$group) #create model (which samples are compared against which)
-dge <- estimateDisp(dge, design)
+dge <- estimateGLMCommonDisp(dge, design)
+dge <- estimateGLMTrendedDisp(dge, design)
+dge <- estimateGLMTagwiseDisp(dge, design)
 ext <- exactTest(dge) #apply test
+fit = glmFit(dge, design)
 all <- topTags(ext, n=nrow(ext$table), adjust.method="BY", sort.by="none")
 all = merge(all$table, countdf[,7:9], by=0, all.x=TRUE, all.y=FALSE,sort=FALSE)
 names(all)[names(all) == 'y'] <- 'TPM'

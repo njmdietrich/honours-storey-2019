@@ -8,9 +8,9 @@ jupyter:
       format_version: '1.1'
       jupytext_version: 1.2.4
   kernelspec:
-    display_name: R [conda env:rkernel] *
+    display_name: R
     language: R
-    name: conda-env-rkernel-r
+    name: ir
 ---
 
 # Honours Project - Expression Quantification
@@ -23,7 +23,7 @@ Bioinformatics, 26(4), 493–500. https://doi.org/10.1093/bioinformatics/btp692
 Theory in Biosciences, 131(4), 281–285. https://doi.org/10.1007/s12064-012-0162-3
 
 ```{r}
-countdf <- readRDS("data/devspine_counts_excluded.rds")
+countdf <- readRDS("data/devspine_counts.rds")
 ```
 
 ```{r}
