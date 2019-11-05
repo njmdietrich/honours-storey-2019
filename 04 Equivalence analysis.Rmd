@@ -1,0 +1,59 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+---
+
+```{r}
+require(edgeR)
+counts = readRDS("data/devspine_counts.rds")
+keep <- filterByExpr(counts)
+saveRDS(keep, "data/kept_genes.rds")
+counts = counts[keep,]
+normfactors = calcNormFactors(counts, method="TMM")
+saveRDS(normfactors, "data/normfactors.rds")
+counts = data.frame(t(apply(counts, 1, function(row){row*normfactors})))
+```
+
+```{r}
+tost = function(dataframe, cols){
+    results = dataTOSTtwo(
+        dataframe[cols,], 
+        "normcount", 
+        "Age", 
+        eqbound_type="raw",
+        low_eqbound=-2,
+        high_eqbound=2)
+    return(max(as.data.frame(results$tost)[,c("p[1]", "p[2]")]))
+}
+```
+
+```{r}
+TOST = function(ROW){
+    Age = c("E12.5", "E12.5", "E12.5", "E16.5", "E16.5", "Adult", "Adult", "Adult")
+    normcount = log2(ROW)
+    dataframe = data.frame(Age, normcount)
+    p1 = tost(dataframe, c(1, 2, 3, 4, 5))
+    p2 = tost(dataframe, c(1, 2, 3, 6, 7, 8))
+    p3 = tost(dataframe, c(4, 5, 6, 7, 8))
+    p_all = p.adjust(c(p1, p2, p3), method = "BY")
+    return(max(p_all))
+}
+```
+
+```{r}
+require(TOSTER)
+pvalue = apply(counts, 1, TOST)
+saveRDS(pvalue, "data/tostresults.rds")
+counts = cbind(counts, pvalue)
+counts[counts[["pvalue"]] < 0.1,]
+```

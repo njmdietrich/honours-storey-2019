@@ -16,7 +16,7 @@ jupyter:
 # Honours Project - Expression Quantification
 To identify expression levels, TPM (transcripts per million) can be used. (1)\
 While this method requires read lengths, this is not necessarily required when lengths between samples are identical.\
-Both calculations require transcript length. Transcript length was retrieved from a gtf file using refGenome.
+Both calculations require transcript length. Transcript length was retrieved from a gtf file using refGenome. The refGenome file was extracted from gz.
 1. Li, B., Ruotti, V., Stewart, R. M., Thomson, J. A., & Dewey, C. N. (2009). RNA-Seq gene expression estimation with read mapping uncertainty.\
 Bioinformatics, 26(4), 493–500. https://doi.org/10.1093/bioinformatics/btp692
 2. Wagner, G. P., Kin, K., & Lynch, V. J. (2012). Measurement of mRNA abundance using RNA-seq data: RPKM measure is inconsistent among samples.\
