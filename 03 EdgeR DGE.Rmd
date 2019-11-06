@@ -32,8 +32,8 @@ countdf["TPMAdult"] <- apply(indTPM[,4:6], 1, mean)
 countdf["maxTPM"] <- apply(countdf[,c("TPM12.5","TPMAdult")], 1, max)
 
 #Conduct edgeR analysis:
-require(edgeR)
-require(stringr)
+library(edgeR)
+library(stringr)
 cond <- str_sub(colnames(countdf[,1:6]),1,5)
 dge <- DGEList(countdf[,1:6], group=cond) #create DGEList object containing data from E12.5 and Adult
 keep <- filterByExpr(dge) #determine genes with low counts to be excluded
@@ -53,7 +53,7 @@ sig <- all[sig != 0,]
 all <- all[order(all$PValue),]
 
 #plot volcano plot:
-require(ggrepel)
+library(ggrepel)
 volcano <- ggplot(data=all, aes(logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
@@ -94,7 +94,7 @@ nrow(annall)
 For the sake of further analysis, they were excluded. This reduces the list from 15.476 genes to 13.588 genes.
 
 ```{r}
-require(ggrepel)
+library(ggrepel)
 volcano <- ggplot(data=allproteins, aes(logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
@@ -110,7 +110,8 @@ ggsave(file = "plots/volcano_proteins.png", plot = volcano, width = 8, height = 
 Plotting the volcano plot again reveals no big difference, with the exception of expression levels being more clearly distinguished due to the absence of a few extremely highly expressed non-protein-coding genes.
 
 ```{r}
-sigprot = merge(sig, allproteins, all.x=TRUE, all.y=FALSE, sort=FALSE)
+sigprot = merge(sig, allproteins, all.x=FALSE, all.y=FALSE, sort=FALSE)
+saveRDS(sigprot, "data/sig_regulated_genes.rds")
 sum(sigprot$logFC < 0)
 sum(sigprot$logFC > 0)
 mean(sigprot[sigprot$logFC < 0,]$maxTPM)

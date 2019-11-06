@@ -27,8 +27,8 @@ countdf <- readRDS("data/devspine_counts.rds")
 ```
 
 ```{r}
-require(refGenome)
-require(stringr)
+library(refGenome)
+library(stringr)
 genome <- ensemblGenome()
 read.gtf(genome, filename="data/Mus_musculus.GRCm38.87.gtf") #opens the gtf file
 ann <- getGenePositions(genome,"gene_id") #retrieves gene annotations from the gtf file

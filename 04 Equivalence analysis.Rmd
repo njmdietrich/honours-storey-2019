@@ -13,8 +13,14 @@ jupyter:
     name: ir
 ---
 
+# Honours Project - Equivalence analysis
+To get genes with consistent expression, equivalence analysis is used.
+Due to the already quite low power and the fact that one replicate in E16.5 is missing, a TOST is only going to be carried out between E12.5 and Adult.\
+This is okay because we are trying to find genes that are expressed in embryonal stage as well as in adult stage, so what happens during development is not too important.
+## TOST
+
 ```{r}
-require(edgeR)
+library(edgeR)
 counts = readRDS("data/devspine_counts.rds")
 keep <- filterByExpr(counts)
 saveRDS(keep, "data/kept_genes.rds")
@@ -22,6 +28,7 @@ counts = counts[keep,]
 normfactors = calcNormFactors(counts, method="TMM")
 saveRDS(normfactors, "data/normfactors.rds")
 counts = data.frame(t(apply(counts, 1, function(row){row*normfactors})))
+TPM = readRDS("data/TPM.rds")
 ```
 
 ```{r}
@@ -31,8 +38,8 @@ tost = function(dataframe, cols){
         "normcount", 
         "Age", 
         eqbound_type="raw",
-        low_eqbound=-2,
-        high_eqbound=2)
+        low_eqbound=-1,
+        high_eqbound=1)
     return(max(as.data.frame(results$tost)[,c("p[1]", "p[2]")]))
 }
 ```
@@ -42,18 +49,47 @@ TOST = function(ROW){
     Age = c("E12.5", "E12.5", "E12.5", "E16.5", "E16.5", "Adult", "Adult", "Adult")
     normcount = log2(ROW)
     dataframe = data.frame(Age, normcount)
-    p1 = tost(dataframe, c(1, 2, 3, 4, 5))
+#    p1 = tost(dataframe, c(1, 2, 3, 4, 5))
     p2 = tost(dataframe, c(1, 2, 3, 6, 7, 8))
-    p3 = tost(dataframe, c(4, 5, 6, 7, 8))
-    p_all = p.adjust(c(p1, p2, p3), method = "BY")
-    return(max(p_all))
+#    p3 = tost(dataframe, c(4, 5, 6, 7, 8))
+#    return(max(c(p1, p2, p3)))
+    return(p2)
 }
 ```
 
 ```{r}
-require(TOSTER)
+library(TOSTER)
 pvalue = apply(counts, 1, TOST)
+padjust = p.adjust(pvalue, method="BY")
 saveRDS(pvalue, "data/tostresults.rds")
-counts = cbind(counts, pvalue)
-counts[counts[["pvalue"]] < 0.1,]
+```
+
+## Match against housekeeping genes
+Mouse housekeeping genes were downloaded from http://www.housekeeping.unicamp.br/
+### Convert transcript ID to gene ID
+The data includes ENSEMBL IDs, but they are transcript IDs rather than gene IDs. This requires conversion.
+
+```{r}
+load("data/housekeeping.RData")
+library(refGenome)
+genome <- ensemblGenome()
+read.gtf(genome, filename="data/Mus_musculus.GRCm38.87.gtf") #opens the gtf file
+transcripts = extractFeature(genome, "transcript")
+transcripts = getGtf(transcripts)[,c("gene_id", "transcript_id")]
+rm(genome)
+```
+
+```{r}
+house_genes = merge(Mouse_HK_genes, transcripts, by.x = "Ensembl ID", by.y = "transcript_id", all.x=TRUE, all.y=FALSE, sort=FALSE)
+```
+
+### Drop housekeeping genes
+
+```{r}
+library(stringr)
+equivalent = data.frame(Gene_ID = rownames(counts[pvalue < 0.05,]))
+equivalent[,"Gene_ID"] = str_to_upper(equivalent[["Gene_ID"]])
+equivalent = merge(equivalent, house_genes, by.x = "Gene_ID", by.y = "gene_id", all.x=TRUE, all.y=FALSE)
+equivalent = equivalent[is.na(equivalent$`Ensembl ID`),"Gene_ID"]
+saveRDS(equivalent, "data/equi_genes.rds")
 ```

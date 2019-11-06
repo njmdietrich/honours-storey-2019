@@ -25,9 +25,9 @@ countdf = data.frame(counttable)
 PCA was carried out and the result plotted using ggplot2 and ggfortify:
 
 ```{r}
-require(ggplot2)
-require(ggfortify)
-require(stringr)
+library(ggplot2)
+library(ggfortify)
+library(stringr)
 Condition=str_sub(colnames(countdf),1,5)
 pcadf <- cbind.data.frame(Condition, t(countdf))
 pca <- prcomp(pcadf[, 2:ncol(pcadf)])
@@ -43,7 +43,7 @@ The results of this show a clear separation of E12.5 and Adult data. however, th
 For additional analysis, a cluster dendogram was also plotted:
 
 ```{r}
-require(pvclust)
+library(pvclust)
 pvc <- pvclust(countdf)
 dendrogram <- plot(pvc)
 ```
