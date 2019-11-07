@@ -54,7 +54,7 @@ all <- all[order(all$PValue),]
 
 #plot volcano plot:
 library(ggrepel)
-volcano <- ggplot(data=all, aes(logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
+volcano <- ggplot(data=all, aes(-logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
         coord_cartesian(ylim = c(-10, 1100))
@@ -95,7 +95,7 @@ For the sake of further analysis, they were excluded. This reduces the list from
 
 ```{r}
 library(ggrepel)
-volcano <- ggplot(data=allproteins, aes(logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
+volcano <- ggplot(data=allproteins, aes(-logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
         coord_cartesian(ylim = c(-10, 1100))
