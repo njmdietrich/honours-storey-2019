@@ -8,9 +8,9 @@ jupyter:
       format_version: '1.1'
       jupytext_version: 1.2.4
   kernelspec:
-    display_name: R
+    display_name: R [conda env:GO]
     language: R
-    name: ir
+    name: conda-env-GO-r
 ---
 
 # Honours Project - Expression Quantification

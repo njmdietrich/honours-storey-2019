@@ -8,9 +8,9 @@ jupyter:
       format_version: '1.1'
       jupytext_version: 1.2.4
   kernelspec:
-    display_name: R
+    display_name: R [conda env:GO]
     language: R
-    name: ir
+    name: conda-env-GO-r
 ---
 
 # Honours Project - Differential gene expression (edgeR)
@@ -53,7 +53,6 @@ sig <- all[sig != 0,]
 all <- all[order(all$PValue),]
 
 #plot volcano plot:
-library(ggrepel)
 volcano <- ggplot(data=all, aes(-logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
@@ -91,10 +90,9 @@ nrow(allproteins)
 nrow(annall)
 ```
 
-For the sake of further analysis, they were excluded. This reduces the list from 15.476 genes to 13.588 genes.
+For the sake of further analysis, they were excluded. This reduces the list from 15,476 genes to 13,588 genes.
 
 ```{r}
-library(ggrepel)
 volcano <- ggplot(data=allproteins, aes(-logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
         coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +

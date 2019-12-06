@@ -1,0 +1,171 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: R [conda env:GO]
+    language: R
+    name: conda-env-GO-r
+---
+
+# GO-Term Analysis
+### Enrichment calculation
+
+```{r}
+library(stringr)
+library(org.Mm.eg.db)
+library(clusterProfiler)
+diff_genes = readRDS("data/sig_regulated_genes.rds")
+diff_genes$Row.names = str_to_upper(diff_genes$Row.names)
+down_genes = diff_genes[diff_genes$logFC > 0, "Row.names"]
+up_genes   = diff_genes[diff_genes$logFC < 0, "Row.names"]
+annotation = readRDS("data/devspine_genes.rds")
+annotation$ensembl_id = str_to_upper(annotation$ensembl_id)
+equi_genes = readRDS("data/equi_genes.rds")
+equi_genes = data.frame(equi_genes)
+equi_anno  = merge(equi_genes, annotation, by.x="equi_genes", by.y="ensembl_id", all.x=TRUE, all.y=FALSE)
+equi_genes = equi_genes[equi_anno$gene_biotype == "protein_coding",]
+```
+
+```{r}
+GOenrich = function(genes, ontology, pvalue){
+    ego  = enrichGO(gene          = genes,
+               OrgDb         = org.Mm.eg.db,
+               keyType       = "ENSEMBL",
+               ont           = ontology,
+               pAdjustMethod = "BY",
+               pvalueCutoff  = pvalue
+              )
+    ego  = simplify(ego)
+    return(ego)
+}
+```
+
+```{r}
+downGOMF = GOenrich(down_genes, "MF", 0.01)
+upGOMF   = GOenrich(up_genes, "MF", 0.01)
+equiGOMF = GOenrich(equi_genes, "MF", 0.05)
+```
+
+```{r}
+downGOBP = GOenrich(down_genes, "BP", 0.01)
+upGOBP   = GOenrich(up_genes, "BP", 0.01)
+equiGOBP = GOenrich(equi_genes, "BP", 0.05)
+```
+
+Sadly, even after adjusting the p-value for equivalent genes, there are no molecular function enriched terms and only 3 very general biolocial process terms. This could change though with the implementation of a different set of housekeeping genes.
+
+```{r}
+saveRDS(downGOMF, "data/GOanal_downMF.rds")
+saveRDS(upGOMF, "data/GOanal_upMF.rds")
+saveRDS(downGOBP, "data/GOanal_downBP.rds")
+saveRDS(upGOBP, "data/GOanal_upBP.rds")
+saveRDS(equiGOBP, "data/GOanal_equiBP.rds")
+```
+
+### Visualisation
+
+```{r}
+downGOBP = readRDS("data/GOanal_downBP.rds")
+upGOBP = readRDS("data/GOanal_upBP.rds")
+equiGOBP = readRDS("data/GOanal_equiBP.rds")
+downGOMF = readRDS("data/GOanal_downMF.rds")
+upGOMF = readRDS("data/GOanal_upMF.rds")
+```
+
+```{r}
+plotemap = function(geneset){
+    emap = emapplot(geneset, layout = "kk", font.size = 8, showCategory = 20)
+    return(emap)
+}
+```
+
+```{r}
+emapdownBP = plotemap(downGOBP)
+emapupBP = plotemap(upGOBP)
+```
+
+```{r}
+ggsave("plots/GO/upBPemap.png", emapupBP, height = 12, width = 20, units = "cm")
+ggsave("plots/GO/downBPemap.png", emapdownBP, height = 12, width = 20, units = "cm")
+```
+
+# KEGG
+### Enrichment calculation
+
+```{r}
+xx = as.list(org.Mm.egENSEMBL2EG)
+ez_down_genes = xx[down_genes]
+ez_up_genes = xx[up_genes]
+ez_equi_genes = xx[equi_genes]
+```
+
+```{r}
+KEGGenrich = function(genes){
+    kegg = enrichKEGG(gene = genes,
+                      organism = "mmu",
+                      pvalueCutoff = 0.01,
+                      keyType = "ncbi-geneid",
+                      pAdjustMethod = "BY"
+                     )
+}
+```
+
+```{r}
+MKEGGenrich = function(genes){
+    kegg = enrichMKEGG(gene = genes,
+                      organism = "mmu",
+                      pvalueCutoff = 0.05,
+                      keyType = "ncbi-geneid",
+                      pAdjustMethod = "BY"
+                     )
+}
+```
+
+```{r}
+KEGGdown = KEGGenrich(ez_down_genes)
+KEGGup = KEGGenrich(ez_up_genes)
+```
+
+```{r}
+KEGGup[,c("ID", "Description")]
+```
+
+### Visualisation
+
+```{r}
+library("pathview")
+fc = diff_genes$logFC
+names(fc) = as.numeric(as.character(xx[diff_genes$Row.names]))
+```
+
+```{r}
+viewpath = function(pathway){
+    pathview(gene.data = fc,
+             pathway.id = pathway,
+             species = "mmu",
+             kegg.dir = "data/KEGG",
+             limit = list(gene=5,cpd=1)
+            )
+    file.rename(from = paste(pathway, ".pathview.png", sep = ""),
+                to = paste("plots/KEGG/", pathway, ".pathview.png", sep = ""))
+}
+```
+
+```{r}
+viewpath("mmu04330")
+viewpath("mmu04550")
+viewpath("mmu04390")
+viewpath("mmu03008")
+viewpath("mmu04020")
+viewpath("mmu04727")
+```
+
+```{r}
+min(fc)
+```
