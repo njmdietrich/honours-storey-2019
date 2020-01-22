@@ -47,12 +47,6 @@ GOenrich = function(genes, ontology, pvalue){
 ```
 
 ```{r}
-downGOMF = GOenrich(down_genes, "MF", 0.01)
-upGOMF   = GOenrich(up_genes, "MF", 0.01)
-equiGOMF = GOenrich(equi_genes, "MF", 0.05)
-```
-
-```{r}
 downGOBP = GOenrich(down_genes, "BP", 0.01)
 upGOBP   = GOenrich(up_genes, "BP", 0.01)
 equiGOBP = GOenrich(equi_genes, "BP", 0.05)
@@ -61,8 +55,6 @@ equiGOBP = GOenrich(equi_genes, "BP", 0.05)
 Sadly, even after adjusting the p-value for equivalent genes, there are no molecular function enriched terms and only 3 very general biolocial process terms. This could change though with the implementation of a different set of housekeeping genes.
 
 ```{r}
-saveRDS(downGOMF, "data/GOanal_downMF.rds")
-saveRDS(upGOMF, "data/GOanal_upMF.rds")
 saveRDS(downGOBP, "data/GOanal_downBP.rds")
 saveRDS(upGOBP, "data/GOanal_upBP.rds")
 saveRDS(equiGOBP, "data/GOanal_equiBP.rds")
@@ -73,30 +65,29 @@ saveRDS(equiGOBP, "data/GOanal_equiBP.rds")
 ```{r}
 downGOBP = readRDS("data/GOanal_downBP.rds")
 upGOBP = readRDS("data/GOanal_upBP.rds")
-equiGOBP = readRDS("data/GOanal_equiBP.rds")
-downGOMF = readRDS("data/GOanal_downMF.rds")
-upGOMF = readRDS("data/GOanal_upMF.rds")
 ```
 
 ```{r}
-plotemap = function(geneset){
-    emap = emapplot(geneset, layout = "kk", font.size = 8, showCategory = 20)
+plotemap = function(geneset, number){
+    emap = emapplot(geneset, layout = "kk", font.size = 8, showCategory = number, color="p.adjust")
     return(emap)
 }
 ```
 
 ```{r}
-emapdownBP = plotemap(downGOBP)
-emapupBP = plotemap(upGOBP)
+emapdownBP = plotemap(downGOBP, nrow(data.frame(downGOBP)))
+emapupBP = plotemap(upGOBP, nrow(data.frame(upGOBP)))
 ```
 
 ```{r}
-ggsave("plots/GO/upBPemap.png", emapupBP, height = 12, width = 20, units = "cm")
-ggsave("plots/GO/downBPemap.png", emapdownBP, height = 12, width = 20, units = "cm")
+library(ggplot2)
+ggsave("plots/GO/upBPemap.svg", emapupBP, height = 40, width = 80, units = "cm")
+ggsave("plots/GO/downBPemap.svg", emapdownBP, height = 40, width = 80, units = "cm")
+ggsave("plots/GO/upBPemap.png", emapupBP, height = 40, width = 80, units = "cm")
+ggsave("plots/GO/downBPemap.png", emapdownBP, height = 40, width = 80, units = "cm")
 ```
 
 # KEGG
-### Enrichment calculation
 
 ```{r}
 xx = as.list(org.Mm.egENSEMBL2EG)
@@ -130,42 +121,8 @@ MKEGGenrich = function(genes){
 ```{r}
 KEGGdown = KEGGenrich(ez_down_genes)
 KEGGup = KEGGenrich(ez_up_genes)
-```
-
-```{r}
-KEGGup[,c("ID", "Description")]
-```
-
-### Visualisation
-
-```{r}
-library("pathview")
-fc = diff_genes$logFC
-names(fc) = as.numeric(as.character(xx[diff_genes$Row.names]))
-```
-
-```{r}
-viewpath = function(pathway){
-    pathview(gene.data = fc,
-             pathway.id = pathway,
-             species = "mmu",
-             kegg.dir = "data/KEGG",
-             limit = list(gene=5,cpd=1)
-            )
-    file.rename(from = paste(pathway, ".pathview.png", sep = ""),
-                to = paste("plots/KEGG/", pathway, ".pathview.png", sep = ""))
-}
-```
-
-```{r}
-viewpath("mmu04330")
-viewpath("mmu04550")
-viewpath("mmu04390")
-viewpath("mmu03008")
-viewpath("mmu04020")
-viewpath("mmu04727")
-```
-
-```{r}
-min(fc)
+KEGGequi = MKEGGenrich(ez_equi_genes)
+saveRDS(KEGGdown, "data/KEGGdown.rds")
+saveRDS(KEGGup, "data/KEGGup.rds")
+saveRDS(KEGGequi, "data/KEGGequi.rds")
 ```

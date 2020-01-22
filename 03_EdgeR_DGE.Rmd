@@ -34,6 +34,7 @@ countdf["maxTPM"] <- apply(countdf[,c("TPM12.5","TPMAdult")], 1, max)
 #Conduct edgeR analysis:
 library(edgeR)
 library(stringr)
+library(ggplot2)
 cond <- str_sub(colnames(countdf[,1:6]),1,5)
 dge <- DGEList(countdf[,1:6], group=cond) #create DGEList object containing data from E12.5 and Adult
 keep <- filterByExpr(dge) #determine genes with low counts to be excluded
@@ -48,14 +49,14 @@ fit = glmFit(dge, design)
 all <- topTags(ext, n=nrow(ext$table), adjust.method="BY", sort.by="none")
 all = merge(all$table, countdf[,7:9], by=0, all.x=TRUE, all.y=FALSE,sort=FALSE)
 names(all)[names(all) == 'y'] <- 'TPM'
-sig <- decideTestsDGE(ext, adjust.method="BY", p.value=0.01, lfc=1)
+sig <- decideTestsDGE(ext, adjust.method="BY", p.value=0.01, lfc=0.5)
 sig <- all[sig != 0,]
 all <- all[order(all$PValue),]
 
 #plot volcano plot:
 volcano <- ggplot(data=all, aes(-logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
-        coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
+        coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=0.5) + geom_vline(xintercept=-0.5) +
         coord_cartesian(ylim = c(-10, 1100))
         
 volcano
@@ -95,14 +96,14 @@ For the sake of further analysis, they were excluded. This reduces the list from
 ```{r}
 volcano <- ggplot(data=allproteins, aes(-logFC, -log2(PValue))) + geom_point(aes(color=log2(maxTPM)), size=1) +
         scale_colour_viridis_c() + #geom_text_repel(data=head(all, 7), aes(label=Row.names)) 
-        coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=1.5) + geom_vline(xintercept=-1.5) +
+        coord_cartesian(xlim = c(-20, 20)) + geom_hline(yintercept=6.644) + geom_vline(xintercept=0.5) + geom_vline(xintercept=-0.5) +
         coord_cartesian(ylim = c(-10, 1100))
 
 volcano
 ```
 
 ```{r}
-ggsave(file = "plots/volcano_proteins.png", plot = volcano, width = 8, height = 8)
+ggsave(file = "plots/volcano_proteins.png", plot = volcano, width = 6, height = 6)
 ```
 
 Plotting the volcano plot again reveals no big difference, with the exception of expression levels being more clearly distinguished due to the absence of a few extremely highly expressed non-protein-coding genes.

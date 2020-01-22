@@ -8,19 +8,15 @@ jupyter:
       format_version: '1.1'
       jupytext_version: 1.2.4
   kernelspec:
-    display_name: R
+    display_name: R [conda env:GO]
     language: R
-    name: ir
+    name: conda-env-GO-r
 ---
 
 # Honours Project - Sanity Checks
 RNAseq data has previously been cleaned and mapped to the reference genome to arrive at counts per gene. This data was saved in a table format.
 The data was read into R:
 
-```{r}
-counttable = read.table(file = gzfile("data/devspine_read_counts.tsv.gz"), sep = "\t", header = TRUE, row.names = 1)
-countdf = data.frame(counttable)
-```
 
 PCA was carried out and the result plotted using ggplot2 and ggfortify:
 
@@ -46,14 +42,24 @@ For additional analysis, a cluster dendogram was also plotted:
 library(pvclust)
 pvc <- pvclust(countdf)
 dendrogram <- plot(pvc)
+saveRDS(pvc, file="data/pvclust.rds")
 ```
 
 ```{r}
-svg(filename="plots/sanity_checks/dendrogram.svg", 
+library(pvclust)
+pvc = readRDS("data/pvclust.rds")
+```
+
+```{r}
+png(filename="plots/sanity_checks/dendrogram.png", 
     width=5, 
-    height=4, 
+    height=3,
+    units="in",
+    res=300,
     pointsize=8)
-plot(pvc)
+plot(pvc, 
+     print.pv=c("si"),
+     print.num=FALSE)
 dev.off()
 ```
 

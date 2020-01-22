@@ -1,0 +1,152 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.1'
+      jupytext_version: 1.2.4
+  kernelspec:
+    display_name: R [conda env:GO]
+    language: R
+    name: conda-env-GO-r
+---
+
+# Manual analysis of specific genes, pathways, GO-terms
+
+```{r}
+library(stringr)
+library(clusterProfiler)
+diff_genes = readRDS("data/sig_regulated_genes.rds")
+diff_genes$Row.names = str_to_upper(diff_genes$Row.names)
+down_genes = diff_genes[diff_genes$logFC > 0, "Row.names"]
+up_genes   = diff_genes[diff_genes$logFC < 0, "Row.names"]
+annotation = readRDS("data/devspine_genes.rds")
+annotation$ensembl_id = str_to_upper(annotation$ensembl_id)
+equi_genes = readRDS("data/equi_genes.rds")
+equi_genes = data.frame(equi_genes)
+equi_anno  = merge(equi_genes, annotation, by.x="equi_genes", by.y="ensembl_id", all.x=TRUE, all.y=FALSE)
+equi_genes = equi_genes[equi_anno$gene_biotype == "protein_coding",]
+```
+
+```{r}
+KEGGup = readRDS("data/KEGGup.rds")
+KEGGdown = readRDS("data/KEGGdown.rds")
+KEGGequi = readRDS("data/KEGGequi.rds")
+```
+
+```{r}
+library(org.Mm.eg.db)
+xx = as.list(org.Mm.egENSEMBL2EG)
+```
+
+```{r}
+library("pathview")
+fc = diff_genes$logFC
+names(fc) = as.numeric(as.character(xx[diff_genes$Row.names]))
+```
+
+```{r}
+viewpath = function(pathway){
+    pathview(gene.data = fc,
+             pathway.id = pathway,
+             species = "mmu",
+             kegg.dir = "data/KEGG",
+             limit = list(gene=5,cpd=1)
+            )
+    file.rename(from = paste(pathway, ".pathview.png", sep = ""),
+                to = paste("plots/KEGG/", pathway, ".pathview.png", sep = ""))
+}
+```
+
+```{r}
+geneset = function(pathway, clustres){
+    genelist = c(str_split(clustres[clustres$ID==pathway,]$geneID, "/", simplify=TRUE))
+    genelist = bitr(genelist, fromType="ENTREZID", toType="ENSEMBL", OrgDb="org.Mm.eg.db")
+    genelist = diff_genes[diff_genes$Row.names %in% genelist$ENSEMBL,]
+    genelist = genelist[order(genelist$logFC),c("gene_name", "logFC", "PValue", "TPM12.5", "TPMAdult")]
+    return(genelist)
+}
+```
+
+```{r}
+TPM = readRDS("data/TPM.rds")
+TPM_adult = c(apply(TPM[, c("Adult_1", "Adult_2", "Adult_3")], 1, mean))
+TPM_E12.5 = c(apply(TPM[, c("E12.5_1", "E12.5_2", "E12.5_3")], 1, mean))
+TPM_means = data.frame(cbind(TPM_E12.5, TPM_adult))
+rownames(TPM_means) = str_to_upper(rownames(TPM_means))
+```
+
+```{r}
+getTPM = function(pattern){
+    mat = annotation[str_detect(annotation$gene_name, pattern),c("ensembl_id","gene_name")]
+    TPM_mat = TPM_means[rownames(TPM_means) %in% mat$ensembl_id,]
+    mat = merge(mat, TPM_mat, by.x="ensembl_id", by.y=0, all.x=TRUE, all.y=TRUE)
+    mat = mat[order(mat$gene_name),]
+    return(mat)
+}
+```
+
+```{r}
+getdiff = function(pattern){
+    mat = diff_genes[str_detect(diff_genes$gene_name, pattern),]
+    mat = mat[order(mat$gene_name),]
+    return(mat)
+}
+```
+
+```{r}
+GOup = readRDS("data/GOanal_upBP.rds")
+GOdown = readRDS("data/GOanal_downBP.rds")
+```
+
+```{r}
+GO2ALLEGS = as.list(org.Mm.egGO2ALLEGS)
+EG2ENSEMBL = as.list(org.Mm.egENSEMBL)
+```
+
+```{r}
+getGO = function(GOobj, term){
+    return(data.frame(GOobj)[str_detect(data.frame(GOobj)$Description, term), c("Description", "p.adjust")])
+}
+
+GOgenes = function(GOobj, GOID){
+    genelist = c(str_split(GOobj[GOobj$ID==GOID,]$geneID, "/", simplify=TRUE))
+    KEGG = str_c(egPATH[unlist(xx[genelist])])
+    genelist = diff_genes[diff_genes$Row.names %in% genelist,]
+    #genelist = cbind(genelist, KEGG)
+    genelist = genelist[order(genelist$logFC),c("Row.names", "gene_name", "logFC", "PValue", "TPM12.5", "TPMAdult")]#, "KEGG")]
+    return(genelist)
+}
+
+GOintersect = function(GOobj, GOID1, GOID2){
+    genelist = c(str_split(GOobj[GOobj$ID==GOID1,]$geneID, "/", simplify=TRUE))
+    genelist = intersect(genelist, EG2ENSEMBL[unlist(GO2ALLEGS[GOID2])])
+    genelist = diff_genes[diff_genes$Row.names %in% genelist,]
+    genelist = genelist[order(genelist$logFC),c("gene_name", "logFC", "PValue", "TPM12.5", "TPMAdult")]
+    return(genelist)
+}
+```
+
+```{r}
+egPATH = as.list(org.Mm.egPATH)
+```
+
+```{r}
+genetokegg = function(gene){
+    egPATH[unlist(xx[gene])]
+}
+```
+
+```{r}
+getdiff("Oct")
+```
+
+```{r}
+getGO(GOup, "blood")
+```
+
+```{r}
+GOgenes(GOup, "GO:1903522")
+```
